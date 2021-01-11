@@ -1,0 +1,40 @@
+﻿<Application x:Class="AudioVolumeSyncer.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AudioVolumeSyncer"
+             xmlns:tb="http://www.hardcodet.net/taskbar"
+             xmlns:system="clr-namespace:System;assembly=mscorlib"
+             xmlns:corewpf="clr-namespace:CodectoryCore.UI.Wpf;assembly=CodectoryCore.UI.Wpf"
+             Exit="Application_Exit"
+             StartupUri="AudioVolumeSyncerHandlerView.xaml">
+    
+    <Application.Resources>
+
+        <system:String x:Key="DonateLink">https://paypal.me/pools/c/8vksshrMln</system:String>
+        <system:String x:Key="InfoLink">https://sourceforge.net/projects/AudioVolumeSyncer</system:String>
+        <system:String x:Key="Version">1.0.0</system:String>
+        <SolidColorBrush x:Key="ButtonBackground" Color="#FF0086F5"/>
+        <SolidColorBrush x:Key="AccentColor" Color="#FFFF581A"/>
+        <SolidColorBrush x:Key="AccentColor2" Color="#4C87B3"/>
+        <CornerRadius x:Key="CornerRadius">3</CornerRadius>
+        <local:EnumLocaleConverter x:Key="EnumLocaleConverter"/>
+        <corewpf:DialogService x:Key="DialogService" />
+        <corewpf:BitmapToBitmapImageConverter x:Key="BitmapToBitmapImageConverter"/>
+        <corewpf:InvertBooleanConverter x:Key="InvertBooleanConverter"/>
+        <corewpf:MainWindowBase x:Key="MainWindowBase"/>
+        <corewpf:IsNotNullConverter x:Key="IsNotNullConverter"/>
+        <corewpf:IsNotZeroConverter x:Key="IsNotZeroConverter"/>
+        <corewpf:StringFormatConcatenator x:Key="StringFormatConcatenator"/>
+        <corewpf:VisibilityBooleanConverter x:Key="VisibilityBooleanConverter"/>
+        <corewpf:TupleConverter x:Key="TupleConverter"/>
+        <corewpf:ConverterChain x:Key="InvertVisibilityBooleanConverter">
+            <corewpf:InvertBooleanConverter />
+            <corewpf:VisibilityBooleanConverter />
+        </corewpf:ConverterChain>
+        <corewpf:ConverterChain x:Key="NotZeroVisibilityBooleanConverter">
+            <corewpf:IsNotZeroConverter />
+            <corewpf:VisibilityBooleanConverter />
+        </corewpf:ConverterChain>
+    </Application.Resources>
+
+</Application>

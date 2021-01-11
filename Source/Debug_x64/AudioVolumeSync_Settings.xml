@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AudioVolumeSyncSettings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <AutoStart>true</AutoStart>
+  <StartMinimizedToTray>false</StartMinimizedToTray>
+  <CloseToTray>true</CloseToTray>
+  <SyncAudioDevicesGuids>
+    <guid>4fb9d7bb-7ab6-467d-a9be-08f6df2bfe86</guid>
+  </SyncAudioDevicesGuids>
+</AudioVolumeSyncSettings>
