@@ -17,17 +17,20 @@ namespace AudioVolumeSyncer
     [DataContract]
     public class AudioVolumeSyncSettings : BaseViewModel
     {
-
+        private bool logging = false;
         private bool autoStart;
         private bool startMinimizedToTray;
         private bool _closeToTray;
         readonly object _audioDevicesLock = new object();
         private ObservableCollection<Guid> _syncAudioDevicesGuids;
-        private ObservableCollection<AudioDeviceSetting> _syncAudioDevices;
 
 
         [DataMember]
         public bool AutoStart { get => autoStart; set { autoStart = value; OnPropertyChanged(); } }
+        
+        [DataMember]
+        public bool Logging { get => logging; set { logging = value; OnPropertyChanged(); } }
+
 
         [DataMember]
         public bool StartMinimizedToTray { get => startMinimizedToTray; set { startMinimizedToTray = value; OnPropertyChanged(); }  }
@@ -36,10 +39,8 @@ namespace AudioVolumeSyncer
         public bool CloseToTray { get => _closeToTray; set { _closeToTray = value; OnPropertyChanged(); } }
 
         [DataMember]
-        public ObservableCollection<Guid> SyncAudioDevicesGuids { get => _syncAudioDevicesGuids; set { _syncAudioDevicesGuids = value; OnPropertyChanged(); } }
+        public ObservableCollection<Guid> GuidsOfSyncedAudioDevices { get => _syncAudioDevicesGuids; set { _syncAudioDevicesGuids = value; OnPropertyChanged(); } }
 
-        [XmlIgnore]
-        public ObservableCollection<AudioDeviceSetting> SyncAudioDevices { get => _syncAudioDevices; set { _syncAudioDevices = value; OnPropertyChanged(); } }
 
         [XmlIgnore]
         public RelayCommand<Tuple<object, object>> AudioSyncDeviceChangedCommand { get; private set; }
@@ -49,11 +50,8 @@ namespace AudioVolumeSyncer
 
         public AudioVolumeSyncSettings()
         {
-            SyncAudioDevicesGuids = new ObservableCollection<Guid>();
-            SyncAudioDevicesGuids.CollectionChanged += SyncAudioDevicesGuids_CollectionChanged;
-            SyncAudioDevices = new ObservableCollection<AudioDeviceSetting>();
-            foreach (CoreAudioDevice device in Tools.AudioController.GetDevices(DeviceType.Playback))
-                SyncAudioDevices.Add(new AudioDeviceSetting(device, false));
+            GuidsOfSyncedAudioDevices = new ObservableCollection<Guid>();
+            GuidsOfSyncedAudioDevices.CollectionChanged += SyncAudioDevicesGuids_CollectionChanged;
             InitializeRelayCommands();
         }
 
@@ -68,9 +66,9 @@ namespace AudioVolumeSyncer
             lock (_audioDevicesLock)
             {
                 if ((bool)deviceTuple.Item2)
-                    SyncAudioDevicesGuids.Add(((AudioDeviceSetting)deviceTuple.Item1).Device.Id);
+                    GuidsOfSyncedAudioDevices.Add(((AudioDeviceSetting)deviceTuple.Item1).Device.Id);
                 else
-                    SyncAudioDevicesGuids.Remove(((AudioDeviceSetting)deviceTuple.Item1).Device.Id);
+                    GuidsOfSyncedAudioDevices.Remove(((AudioDeviceSetting)deviceTuple.Item1).Device.Id);
             }
         }
 
@@ -81,11 +79,19 @@ namespace AudioVolumeSyncer
             {
                 case NotifyCollectionChangedAction.Add:
                     foreach (var guid in e.NewItems)
-                        SyncAudioDevices.First(d => d.Device.Id.Equals(guid)).Sync = true;
+                    {
+                        var audioDevice = AudioSyncHelper.AudioDevices.First(d => d.Device.Id.Equals(guid));
+                            if (audioDevice != null)
+                            audioDevice.Sync = true;
+                    }
                     break;
                 case NotifyCollectionChangedAction.Remove:
                     foreach (var guid in e.OldItems)
-                        SyncAudioDevices.First(d => d.Device.Id.Equals(guid)).Sync = false;
+                    {
+                        var audioDevice = AudioSyncHelper.AudioDevices.First(d => d.Device.Id.Equals(guid));
+                        if (audioDevice != null)
+                            audioDevice.Sync = false;
+                    }
                     break;
 
             }
@@ -99,6 +105,13 @@ namespace AudioVolumeSyncer
             {
                 settings = (AudioVolumeSyncSettings)serializer.Deserialize(reader);
             }
+            List<Guid> toRemove = new List<Guid>();
+            foreach (var guidToSync in settings.GuidsOfSyncedAudioDevices)
+                if (!AudioSyncHelper.AudioDevices.Any(d => d.Device.Id.Equals(guidToSync)))
+                    toRemove.Add(guidToSync);
+            foreach (Guid guid in toRemove)
+                settings.GuidsOfSyncedAudioDevices.Remove(guid);
+
             return settings;
         }
     }

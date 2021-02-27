@@ -115,6 +115,15 @@ namespace AudioVolumeSyncer {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Logging ähnelt.
+        /// </summary>
+        public static string Logging {
+            get {
+                return ResourceManager.GetString("Logging", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Ressource vom Typ System.Drawing.Icon ähnlich wie (Symbol).
         /// </summary>
         public static System.Drawing.Icon Logo {

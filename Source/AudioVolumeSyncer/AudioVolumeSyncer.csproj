@@ -118,7 +118,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AudioSyncHelper.cs" />
     <Compile Include="Audio\AudioDeviceSetting.cs" />
+    <Compile Include="FastObservableCollection.cs" />
     <Compile Include="Tools.cs" />
     <Compile Include="Audio\AudioMasterChangedProvider.cs" />
     <Compile Include="Audio\VolumeProvider.cs" />

@@ -55,7 +55,7 @@
         <local:AudioVolumeSyncerSettingsView Grid.Row="0"  DataContext="{Binding ElementName=MainWindow , Path=DataContext.Settings}" Margin="0,0,5,0" Grid.Column="0" Grid.ColumnSpan="4"  />
 
         <Button Grid.Column="3" Grid.Row="1" Content="{x:Static local:Locale_Texts.Shutdown}"  Command="{Binding ShutdownCommand}" Margin="5,5,10,5" RenderTransformOrigin="0.914,0.566" HorizontalAlignment="Right" Width="113" Height="20" VerticalAlignment="Bottom"/>
-        <TextBlock  Text="{Binding Mode=OneWay, Source={StaticResource Version}, StringFormat= V\{0\} }"  Width="Auto" Margin="10,5,5,5"  Grid.Row="1"  Grid.Column="0"  Height="13" HorizontalAlignment="Right"  />
+        <TextBlock  Text="{Binding Version, StringFormat= V\{0\} }"  Width="Auto" Margin="10,5,5,5"  Grid.Row="1"  Grid.Column="0"  Height="13" HorizontalAlignment="Right"  />
 
         <TextBlock  Width="Auto" Margin="5"  Grid.Row="1"  Grid.Column="1"  Height="13" HorizontalAlignment="Right"  >
              <Hyperlink  NavigateUri="{Binding Mode=OneWay, Source={StaticResource InfoLink}}" RequestNavigate="Hyperlink_RequestNavigate">

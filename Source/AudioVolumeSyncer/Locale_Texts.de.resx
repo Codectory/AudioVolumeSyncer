@@ -132,6 +132,9 @@
   <data name="Info" xml:space="preserve">
     <value>Info</value>
   </data>
+  <data name="Logging" xml:space="preserve">
+    <value>Logging</value>
+  </data>
   <data name="MinimizeToTray" xml:space="preserve">
     <value>Zu Symbolleiste minimieren, beim Schließen</value>
   </data>
@@ -149,6 +152,9 @@
   </data>
   <data name="StartToTray" xml:space="preserve">
     <value>In Symbolleiste minimiert starten</value>
+  </data>
+  <data name="String1" xml:space="preserve">
+    <value>https://sourceforge.net/p/audiovolumesyncer</value>
   </data>
   <data name="VolumeSyncDevices" xml:space="preserve">
     <value>Lautstärkesynchronisierung</value>
