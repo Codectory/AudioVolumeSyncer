@@ -15,7 +15,7 @@ namespace AudioVolumeSyncer
     {
         private static bool _cancelAudioDeviceUpdatesRequested = false;
         private static Thread _audioDeviceUpdates = null;
-        readonly static object _lockAudioUpdateThread = new object();
+        static readonly object _lockAudioUpdateThread = new object();
 
         private static FastObservableCollection<AudioDeviceSetting> _syncAudioDevices = new FastObservableCollection<AudioDeviceSetting>();
 

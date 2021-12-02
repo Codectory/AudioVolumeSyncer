@@ -1,7 +1,9 @@
 ﻿using AudioSwitcher.AudioApi;
 using AudioSwitcher.AudioApi.CoreAudio;
+using CodectoryCore;
 using CodectoryCore.Logging;
 using CodectoryCore.UI.Wpf;
+using CodectoryCore.Windows;
 using Hardcodet.Wpf.TaskbarNotification;
 using Microsoft.Win32;
 using System;
@@ -27,7 +29,6 @@ namespace AudioVolumeSyncer
 {
     public class AudioVolumeSyncerHandler : BaseViewModel
     {
-        public static Logs Logs = new Logs($"{System.AppDomain.CurrentDomain.BaseDirectory}AudioVolumeSyncer.log", "Audio Volume Syncer", true);
 
 
         static IDisposable _deviceChangedDisposable;
@@ -102,9 +103,11 @@ namespace AudioVolumeSyncer
             {
                 if (Initialized)
                     return;
-                Logs.Add("Initializing...", false);
+                Globals.Logs.Add("Initializing...", false);
                 AudioSyncHelper.StartAudioDevicesUpdates();
+
                 InitializeAudioObjects();
+
                 LoadSettings();
                 InitializeTrayMenu();
                 CreateRelayCommands();
@@ -112,7 +115,7 @@ namespace AudioVolumeSyncer
                 ShowView = !Settings.StartMinimizedToTray;
        
                 Initialized = true;
-                Logs.Add("Initialized", false);
+                Globals.Logs.Add("Initialized", false);
 
             }
         }
@@ -133,7 +136,7 @@ namespace AudioVolumeSyncer
                 }
                 catch (Exception ex)
                 {
-                    Logs.AddException(ex);
+                    Globals.Logs.AddException(ex);
                     throw;
                 }
             }
@@ -142,17 +145,17 @@ namespace AudioVolumeSyncer
 
         private void LoadSettings()
         {
-            Logs.Add("Loading settings..", false);
+            Globals.Logs.Add("Loading settings..", false);
             try
             {
                 if (File.Exists(SettingsPath))
                 {
-                    Logs.Add("Loading settings...", false);
+                    Globals.Logs.Add("Loading settings...", false);
                     Settings = AudioVolumeSyncSettings.ReadSettings(SettingsPath);
                 }
                 else
                 {
-                    Logs.Add("Creating settings file", false);
+                    Globals.Logs.Add("Creating settings file", false);
 
                     Settings = new AudioVolumeSyncSettings();
                     SaveSettings();
@@ -162,22 +165,36 @@ namespace AudioVolumeSyncer
             {
                 string backupFile = $"{System.AppDomain.CurrentDomain.BaseDirectory}AudioVolumeSyncer_Settings_{DateTime.Now.ToString("yyyyMMddHHmmss")}.xml.bak";
                 File.Move(SettingsPath, backupFile);
-                Logs.Add($"Created backup of invalid settings file: {backupFile}", false);
+                Globals.Logs.Add($"Created backup of invalid settings file: {backupFile}", false);
                 File.Delete(SettingsPath);
-                Logs.Add("Failed to load settings", false);
-                Logs.AddException(ex);
+                Globals.Logs.Add("Failed to load settings", false);
+                Globals.Logs.AddException(ex);
                 Settings = new AudioVolumeSyncSettings();
                 SaveSettings();
-                Logs.Add("Created new settings file", false);
+                Globals.Logs.Add("Created new settings file", false);
 
 
             }
+            List<CoreAudioDevice> devicesToDelete = new List<CoreAudioDevice>();
             foreach (var guid in Settings.GuidsOfSyncedAudioDevices)
-                AddAudioDevice(AudioSyncHelper.AudioController.GetDevice((Guid)guid));
+            {
+                var audioDevice = AudioSyncHelper.AudioController.GetDevice((Guid)guid);
+                if (audioDevice != null)
+                    AddAudioDevice(audioDevice);
+                else
+                    devicesToDelete.Add(audioDevice);
+
+            }
+            if (devicesToDelete.Count > 0)
+            {
+                foreach (var device in devicesToDelete)
+                    Settings.GuidsOfSyncedAudioDevices.Remove(device.Id);
+                SaveSettings();
+            }
             Logs.LoggingEnabled = Settings.Logging;
             settings.GuidsOfSyncedAudioDevices.CollectionChanged += SyncAudioDevicesGuids_CollectionChanged;
             settings.PropertyChanged += Settings_PropertyChanged;
-            Logs.Add("Settings loaded", false);
+            Globals.Logs.Add("Settings loaded", false);
         }
 
 
@@ -197,7 +214,7 @@ namespace AudioVolumeSyncer
 
         private void InitializeTrayMenu()
         {
-            Logs.Add("Initializing tray menu", false);
+            Globals.Logs.Add("Initializing tray menu", false);
             try
             {
                 TrayMenu = new TaskbarIcon();
@@ -221,12 +238,12 @@ namespace AudioVolumeSyncer
                 contextMenu.Items.Add(close);
                 TrayMenu.ContextMenu = contextMenu;
                 TrayMenu.TrayLeftMouseDown += TrayMenu_TrayLeftMouseDown;
-                Logs.Add("Tray menu initialized", false);
+                Globals.Logs.Add("Tray menu initialized", false);
 
             }
             catch (Exception ex)
             {
-                Logs.AddException(ex);
+                Globals.Logs.AddException(ex);
                 throw ex;
             }
         }
@@ -244,7 +261,10 @@ namespace AudioVolumeSyncer
         {
             lock (_accessLock)
             {
-                Tools.SetAutoStart(Locale_Texts.AudioVolumeSyncer, System.Reflection.Assembly.GetEntryAssembly().Location, settings.AutoStart);
+                if (settings.AutoStart)
+                    AutoStart.Activate(Locale_Texts.AudioVolumeSyncer, System.Reflection.Assembly.GetEntryAssembly().Location);
+                else
+                    AutoStart.Deactivate(Locale_Texts.AudioVolumeSyncer, System.Reflection.Assembly.GetEntryAssembly().Location);
                 Logs.LoggingEnabled = Settings.Logging;
                 SaveSettings();
             }
@@ -254,7 +274,7 @@ namespace AudioVolumeSyncer
 
         private void TrayMenu_TrayLeftMouseDown(object sender, RoutedEventArgs e)
         {
-            Logs.Add("Open app from Tray", false);
+            Globals.Logs.Add("Open app from Tray", false);
             SwitchTrayIcon(false);
             ShowView = true;
 
@@ -262,16 +282,16 @@ namespace AudioVolumeSyncer
 
         private void SaveSettings()
         {
-            Logs.Add("Saving settings..", false);
+            Globals.Logs.Add("Saving settings..", false);
             try
             {
                 Settings.SaveSettings(SettingsPath);
-                Logs.Add("Settings saved", false);
+                Globals.Logs.Add("Settings saved", false);
 
             }
             catch (Exception ex)
             {
-                Logs.AddException(ex);
+                Globals.Logs.AddException(ex);
                 throw;
             }
         }
@@ -283,12 +303,12 @@ namespace AudioVolumeSyncer
         {
             if (Settings.CloseToTray)
             {
-                Logs.Add($"Minimizing to tray...", false);
+                Globals.Logs.Add($"Minimizing to tray...", false);
                 SwitchTrayIcon(true);
             }
             else
             {
-                Logs.Add($"Shutting down...", false);
+                Globals.Logs.Add($"Shutting down...", false);
                 Shutdown();
             }
         }
@@ -318,7 +338,7 @@ namespace AudioVolumeSyncer
 
                     _audioDevices.Add(device);
                     _volumeDisposables.Add(device, device.VolumeChanged.Subscribe(_volumeProvider));
-                    Logs.Add($"Slave device added: {device.FullName} - {device.Id}", false);
+                    Globals.Logs.Add($"Slave device added: {device.FullName} - {device.Id}", false);
 
                 }
             }
@@ -335,7 +355,7 @@ namespace AudioVolumeSyncer
                     _volumeDisposables[device].Dispose();
                     _volumeDisposables.Remove(device);
                     _audioDevices.Remove(device);
-                    Logs.Add($"Slave device removed: {device.FullName} - {device.Id}", false);
+                    Globals.Logs.Add($"Slave device removed: {device.FullName} - {device.Id}", false);
                 }
             }
             SyncVolume(device);
@@ -357,7 +377,7 @@ namespace AudioVolumeSyncer
             //        lock (accessLock)
             //            _volumeDisposables.Add(MasterAudioDevice, MasterAudioDevice.VolumeChanged.Subscribe(_volumeProvider));
             //        SyncVolume(MasterAudioDevice);
-            //        Logs.Add($"New master: {MasterAudioDevice.FullName} - {MasterAudioDevice.Id}", false);
+            //        Globals.Logs.Add($"New master: {MasterAudioDevice.FullName} - {MasterAudioDevice.Id}", false);
 
             //        MasterChanged?.Invoke(this, EventArgs.Empty);
             //    }
@@ -377,17 +397,17 @@ namespace AudioVolumeSyncer
                 {
                     double volume = changedDevice.Volume;
                     bool muted = changedDevice.IsMuted;
-                    Logs.Add($"Volume changed - Muted: {muted} New volume: {changedDevice.Volume} Device: {changedDevice.FullName} - {changedDevice.Id}", false);
+                    Globals.Logs.Add($"Volume changed - Muted: {muted} New volume: {changedDevice.Volume} Device: {changedDevice.FullName} - {changedDevice.Id}", false);
                     foreach (CoreAudioDevice slaveDevice in _audioDevices.ToList())
                     {
                         if (!muted)
-                            slaveDevice.Volume = volume;
-                        slaveDevice.Mute(muted);
+                            slaveDevice.SetVolumeAsync(volume).Wait();
+                        slaveDevice.SetMuteAsync(muted).Wait();
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logs.AddException(ex);
+                    Globals.Logs.AddException(ex);
                     throw;
                 }
                 finally
@@ -405,17 +425,15 @@ namespace AudioVolumeSyncer
         {
             lock (accessLock)
             {
-                Logs.Add($"Cleaning...", false);
+                Globals.Logs.Add($"Cleaning...", false);
                 if (Initialized)
                 {
                     _deviceChangedDisposable.Dispose();
                     AudioSyncHelper.AudioController.Dispose();
                     foreach (var disposable in _volumeDisposables)
                         disposable.Value.Dispose();
-                    foreach (var device in _audioDevices)
-                        device.Dispose();
                 }
-                Logs.Add($"Cleaned", false);
+                Globals.Logs.Add($"Cleaned", false);
 
             }
         }

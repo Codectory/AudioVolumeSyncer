@@ -11,12 +11,14 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
+using Newtonsoft.Json;
 
 namespace AudioVolumeSyncer
 {
-    [DataContract]
+    [JsonObject(MemberSerialization.OptIn)]
     public class AudioVolumeSyncSettings : BaseViewModel
     {
+        public static readonly object _settingsLock = new object();
         private bool logging = false;
         private bool autoStart;
         private bool startMinimizedToTray;
@@ -25,24 +27,22 @@ namespace AudioVolumeSyncer
         private ObservableCollection<Guid> _syncAudioDevicesGuids;
 
 
-        [DataMember]
+        [JsonProperty]
         public bool AutoStart { get => autoStart; set { autoStart = value; OnPropertyChanged(); } }
-        
-        [DataMember]
+
+        [JsonProperty]
         public bool Logging { get => logging; set { logging = value; OnPropertyChanged(); } }
 
 
-        [DataMember]
+        [JsonProperty]
         public bool StartMinimizedToTray { get => startMinimizedToTray; set { startMinimizedToTray = value; OnPropertyChanged(); }  }
 
-        [DataMember]
+        [JsonProperty]
         public bool CloseToTray { get => _closeToTray; set { _closeToTray = value; OnPropertyChanged(); } }
 
-        [DataMember]
+        [JsonProperty]
         public ObservableCollection<Guid> GuidsOfSyncedAudioDevices { get => _syncAudioDevicesGuids; set { _syncAudioDevicesGuids = value; OnPropertyChanged(); } }
 
-
-        [XmlIgnore]
         public RelayCommand<Tuple<object, object>> AudioSyncDeviceChangedCommand { get; private set; }
 
 
@@ -80,7 +80,7 @@ namespace AudioVolumeSyncer
                 case NotifyCollectionChangedAction.Add:
                     foreach (var guid in e.NewItems)
                     {
-                        var audioDevice = AudioSyncHelper.AudioDevices.First(d => d.Device.Id.Equals(guid));
+                        var audioDevice = AudioSyncHelper.AudioDevices.FirstOrDefault(d => d.Device.Id.Equals(guid));
                             if (audioDevice != null)
                             audioDevice.Sync = true;
                     }
@@ -88,44 +88,69 @@ namespace AudioVolumeSyncer
                 case NotifyCollectionChangedAction.Remove:
                     foreach (var guid in e.OldItems)
                     {
-                        var audioDevice = AudioSyncHelper.AudioDevices.First(d => d.Device.Id.Equals(guid));
+                        var audioDevice = AudioSyncHelper.AudioDevices.FirstOrDefault(d => d.Device.Id.Equals(guid));
                         if (audioDevice != null)
                             audioDevice.Sync = false;
                     }
                     break;
-
             }
         }
 
         public static AudioVolumeSyncSettings ReadSettings(string path)
         {
             AudioVolumeSyncSettings settings = null;
-            XmlSerializer serializer = new XmlSerializer(typeof(AudioVolumeSyncSettings));
-            using (TextReader reader = new StreamReader(path))
-            {
-                settings = (AudioVolumeSyncSettings)serializer.Deserialize(reader);
-            }
-            List<Guid> toRemove = new List<Guid>();
-            foreach (var guidToSync in settings.GuidsOfSyncedAudioDevices)
-                if (!AudioSyncHelper.AudioDevices.Any(d => d.Device.Id.Equals(guidToSync)))
-                    toRemove.Add(guidToSync);
-            foreach (Guid guid in toRemove)
-                settings.GuidsOfSyncedAudioDevices.Remove(guid);
 
+            lock (_settingsLock)
+            {
+
+                try
+                {
+                    string serializedJson = File.ReadAllText(path);
+                    settings = (AudioVolumeSyncSettings)JsonConvert.DeserializeObject<AudioVolumeSyncSettings>(serializedJson, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Objects,
+                        TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Globals.Logs.AddException(ex);
+                    throw;
+                }
+            }
             return settings;
+        }
+
+        public static void SaveSettings(AudioVolumeSyncSettings settings, string path)
+        {
+            lock (_settingsLock)
+            {
+                try
+                {
+                    string serializedJson = JsonConvert.SerializeObject(settings, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Objects,
+                        TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple
+                    });
+                    File.WriteAllText(path, serializedJson);
+                }
+                catch (Exception ex)
+                {
+                    Globals.Logs.AddException(ex);
+                    throw;
+                }
+            }
         }
     }
 
     public static class AudioVolumeSyncSettingsExtension
     {
 
-        public static void SaveSettings(this AudioVolumeSyncSettings setting, string path)
+        public static void SaveSettings(this AudioVolumeSyncSettings settings, string path)
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(AudioVolumeSyncSettings));
-            using (TextWriter writer = new StreamWriter(path))
-            {
-                serializer.Serialize(writer, setting);
-            }
+
+            AudioVolumeSyncSettings.SaveSettings(settings, path);
+
         }
 
     }
